@@ -6,68 +6,82 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+
 load_dotenv()
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'aT3J6yUWANPrwzm'
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False,
-app.config['SESSION_COOKIE_HTTPONLY']=True,
-app.config['REMEMBER_COOKIE_HTTPONLY']=True,
-app.config['SESSION_COOKIE_DOMAIN']=None
-UPLOAD_FOLDER = 'static/uploads'
+app.config['SESSION_COOKIE_SECURE'] = True  # Включено для SSL
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_DOMAIN'] = None
+
+UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    "mssql+pyodbc://@(localdb)\\MSSQLLocalDB/BakeryDB?"
-    "driver=ODBC+Driver+17+for+SQL+Server&trusted_connection=yes&unicode_results=True"
-)
+
+# Проверь тут данные! Измени your_password на реальный пароль от mysql
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://superpuperchelic:McpcjlsLYTQbkIa@localhost/BakeryDB'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db = SQLAlchemy(app)
-CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://127.0.0.1:3000"]) 
+
+CORS(app, supports_credentials=True, origins=["*"]) 
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
 class Admin(UserMixin, db.Model):
     __tablename__ = 'Admins'
     id = db.Column('Id', db.Integer, primary_key=True)
     username = db.Column('Username', db.String(50), unique=True)
     password_hash = db.Column('PasswordHash', db.String(255))
+
 class Category(db.Model):
     __tablename__ = 'Categories'
     Id = db.Column(db.Integer, primary_key=True)
-    Name = db.Column(db.NVARCHAR(100), nullable=False)
+    Name = db.Column(db.String(100), nullable=False)
     products = db.relationship('Product', backref='category', lazy=True)
+
 class Product(db.Model):
     __tablename__ = 'Products'
     Id = db.Column(db.Integer, primary_key=True)
-    Name = db.Column(db.NVARCHAR(255), nullable=False)
-    Weight = db.Column(db.NVARCHAR(50))
+    Name = db.Column(db.String(255), nullable=False)
+    Weight = db.Column(db.String(50))
     Price = db.Column(db.Float)
-    ImagePath = db.Column(db.NVARCHAR(1000))
+    ImagePath = db.Column(db.String(1000))
     CategoryId = db.Column(db.Integer, db.ForeignKey('Categories.Id'))
+
 class Promotion(db.Model):
     __tablename__ = 'Promotion'
     Id = db.Column(db.Integer, primary_key=True)
-    ImageUrl = db.Column(db.NVARCHAR(1000))
+    ImageUrl = db.Column(db.String(1000))
+
 class News(db.Model):
     __tablename__ = 'News'
     Id = db.Column(db.Integer, primary_key=True)
-    Title = db.Column(db.NVARCHAR(255))
-    ImageUrl = db.Column(db.NVARCHAR(1000))
+    Title = db.Column(db.String(255))
+    ImageUrl = db.Column(db.String(1000))
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(Admin, int(user_id))
+
 @app.route('/')
 def index():
     if not current_user.is_authenticated:
         return redirect(url_for('login'))
-    return redirect("http://localhost:3000")
+    return redirect('/')
+
 @app.route('/api/check_auth', methods=['GET'])
 def check_auth():
     if current_user.is_authenticated:
         return jsonify({"status": "authenticated", "user": current_user.username}), 200
     return jsonify({"status": "unauthorized"}), 401
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -84,7 +98,7 @@ def login():
             login_user(admin)
             if request.is_json:
                 return jsonify({"status": "ok"}), 200
-            return redirect("http://localhost:3000") 
+            return redirect('/') 
         
         return jsonify({"error": "Неверный логин или пароль"}), 401
     return render_template('login.html')
@@ -95,7 +109,7 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# --- API ЭНДПОИНТЫ (ОТКРЫТЫЕ) ---
+# --- API ЭНДПОИНТЫ ---
 
 @app.route('/api/products', methods=['GET'])
 def get_products():
@@ -121,10 +135,7 @@ def get_news():
     news_list = News.query.all()
     return jsonify([{"id": n.Id, "title": n.Title, "image": n.ImageUrl} for n in news_list])
 
-# --- ЭНДПОИНТЫ АДМИНКИ (ЗАЩИЩЕНЫ) ---
-
 @app.route('/api/products', methods=['POST'])
-# @login_required 
 def add_product():
     name = request.form.get('name')
     weight = request.form.get('weight')
@@ -135,8 +146,7 @@ def add_product():
     if file:
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        backend_ip = os.getenv("BACKEND_IP")
-        image_url = f"http://{backend_ip}:5000/static/uploads/{filename}"
+        image_url = f"/static/uploads/{filename}"
     else:
         image_url = ""
 
@@ -156,31 +166,24 @@ def add_product():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# --- ЗАПУСК ---
+# --- АВТОМАТИЧЕСКАЯ ИНИЦИАЛИЗАЦИЯ (ВЫНЕСЕНА ИЗ __main__) ---
+with app.app_context():
+    db.create_all()
+    
+    if not Category.query.first():
+        categories_list = [
+            "Все", "Сладкая выпечка", "Хлеб", "Десерты", "Пироги", "Торты",
+            "Первые блюда", "Вторые блюда", "Гарниры", "Салаты", "Закуски",
+            "Горячие напитки", "Холодные напитки"
+        ]
+        for cat_name in categories_list:
+            db.session.add(Category(Name=cat_name))
+        db.session.commit()
+
+    if not Admin.query.filter_by(username='admin').first():
+        hashed_pw = generate_password_hash('admin123')
+        db.session.add(Admin(username='admin', password_hash=hashed_pw))
+        db.session.commit()
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        
-        if not Category.query.first():
-            categories_list = ['Сладкая выпечка', 'Хлеб', 'Десерты', 'Пироги', 'Торты']
-            for cat_name in categories_list:
-                db.session.add(Category(Name=cat_name))
-            db.session.commit()
-
-        if not Admin.query.filter_by(username='admin').first():
-            hashed_pw = generate_password_hash('admin123')
-            db.session.add(Admin(username='admin', password_hash=hashed_pw))
-            db.session.commit()
-
     app.run(debug=True, host='0.0.0.0', port=5000)
-
-
-
-@app.route('/static/uploads/<filename>')
-def uploaded_file(filename):
-    """Безопасный отпуск файлов из строго ограниченной директории"""
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-
-
