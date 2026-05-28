@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в систему | УЮТ</title>
+    <style>
+        /* Центрируем всё на странице */
+        body { 
+            background: #FDFBF7; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0;
+        }
+
+        /* Белая карточка формы */
+        .login-box { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+            width: 320px; /* Фиксированная ширина всей формы */
+            text-align: center;
+        }
+
+        h2 { 
+            color: #5D5D5D; 
+            font-weight: 300; 
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+        }
+
+        /* Общие стили для полей и кнопки */
+        .form-group {
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        input { 
+            width: 100%; /* Растягиваем на всю ширину контейнера */
+            padding: 12px 15px; 
+            border: 1px solid #E0E0E0; 
+            border-radius: 8px; 
+            font-size: 16px;
+            color: #555;
+            background-color: #FAFAFA;
+            box-sizing: border-box; /* Важно: отступы не увеличивают ширину */
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #D4E1D1;
+            background-color: #fff;
+        }
+
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            background: #D4E1D1; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            color: #4A6148; 
+            font-size: 14px;
+            font-weight: bold; 
+            letter-spacing: 2px;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #C3D1C0;
+        }
+
+        .error-message {
+            color: #E57373;
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: none; /* Показывается через JS если нужно */
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>ВХОД ДЛЯ АДМИНИСТРАЦИИ</h2>
+        
+        <form method="POST">
+            <div class="form-group">
+                <input type="text" name="username" placeholder="Логин" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <input type="password" name="password" placeholder="Пароль" required autocomplete="current-password">
+            </div>
+            <button type="submit">ВОЙТИ</button>
+        </form>
+    </div>
+</body>
+</html>
